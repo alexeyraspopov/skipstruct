@@ -325,6 +325,7 @@ test("final", async () => {
 			this.size = 0;
 			this.next = new Uint32Array(capacity);
 			this.prev = new Uint32Array(capacity);
+			this.expw = null;
 		}
 	}
 
@@ -332,12 +333,13 @@ test("final", async () => {
 		return a < b ? -1 : a > b ? 1 : 0;
 	}
 
-	let express = new Map();
+	let p = 1 / 16;
+	let m = 3 / p;
 
 	function insert(rank, index, valueOf) {
 		let value = valueOf(index);
 
-		if (order(value, valueOf(rank.head)) <= 0) {
+		if (rank.size === 0 || order(value, valueOf(rank.head)) <= 0) {
 			rank.next[index] = rank.head;
 			rank.prev[rank.head] = index;
 			rank.head = index;
@@ -346,7 +348,7 @@ test("final", async () => {
 			rank.prev[index] = rank.tail;
 			rank.tail = index;
 		} else {
-			let point = search(rank, index, valueOf) ?? rank.head;
+			let point = rank.size > 0 ? search(rank, index, valueOf) : rank.head;
 			rank.next[rank.prev[point]] = index;
 			rank.prev[index] = rank.prev[point];
 			rank.prev[point] = index;
@@ -354,18 +356,14 @@ test("final", async () => {
 		}
 		rank.size++;
 
-		if (rank.size > 16 && !express.has(rank)) {
-			express.set(rank, new LinkedRank(rank.capacity));
-		}
-		if (rank.size > 16 && Math.random() < 1 / 16) {
-			insert(express.get(rank), index, valueOf);
-		}
+		if (rank.size < m) return;
+		if (rank.expw == null) rank.expw = new LinkedRank(rank.capacity);
+		if (Math.random() <= p) insert(rank.expw, index, valueOf);
 	}
 
 	function search(rank, index, valueOf) {
-		if (rank.size == 0) return null;
-		let expr = express.get(rank);
-		let point = expr != null && expr.size > 0 ? search(expr, index, valueOf) : rank.head;
+		let point =
+			rank.expw != null && rank.expw.size > 0 ? search(rank.expw, index, valueOf) : rank.head;
 		let value = valueOf(index);
 		while (order(valueOf(point), value) <= 0 && point !== rank.tail) {
 			point = rank.next[point];
@@ -374,6 +372,12 @@ test("final", async () => {
 	}
 
 	function remove(rank, index) {
+		if (rank.expw != null) remove(rank.expw, index);
+
+		if (rank.prev[index] !== rank.next[index]) {
+			rank.size--;
+		}
+
 		if (rank.head === index) {
 			rank.head = rank.next[index];
 		} else if (rank.tail === index) {
@@ -382,7 +386,6 @@ test("final", async () => {
 			rank.next[rank.prev[index]] = rank.next[index];
 			rank.prev[rank.next[index]] = rank.prev[index];
 		}
-		rank.size--;
 	}
 
 	let data = new CircularBuffer(6);
@@ -466,9 +469,6 @@ test("final", async () => {
 	deepEqual(follow(valueOf, rank.next, rank.head, rank.size), ["b", "e", "f", "f", "g", "g"]);
 	deepEqual(follow(valueOf, rank.prev, rank.tail, rank.size), ["g", "g", "f", "f", "e", "b"]);
 
-	// await new Promise((resolve) => setTimeout(resolve, 10_000));
-	// console.log("start");
-
 	data = new CircularBuffer(1_000_000);
 	rank = new LinkedRank(1_000_000);
 
@@ -477,9 +477,6 @@ test("final", async () => {
 		let index = data.append(value);
 		insert(rank, index, valueOf);
 	}
-
-	// console.log("stop");
-	// await new Promise((resolve) => setTimeout(resolve, 1000_000));
 });
 
 function follow(valueOf, pointers, start, size) {

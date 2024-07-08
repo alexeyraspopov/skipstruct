@@ -52,7 +52,7 @@ test("linked rank", async () => {
 			rank.prev[index] = rank.tail;
 			rank.tail = index;
 		} else {
-			let point = rank.size > 0 ? search(rank, index, valueOf) : rank.head;
+			let point = search(rank, index, valueOf);
 			rank.next[rank.prev[point]] = index;
 			rank.prev[index] = rank.prev[point];
 			rank.prev[point] = index;

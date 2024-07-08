@@ -1,6 +1,44 @@
 import { test } from "node:test";
 import { equal, deepEqual } from "node:assert/strict";
-import { CircularBuffer } from "./modules/CircularBuffer.js";
+
+/** @template Value */
+export class CircularBuffer {
+	/** @param {number} [capacity] */
+	constructor(capacity = 2 ** 25) {
+		/** @type {number} */
+		this.capacity = capacity;
+		/** @type {Array<Value>} */
+		this.values = [];
+		/** @type {number} */
+		this.limit = 0;
+		/** @type {number} */
+		this.cursor = 0;
+	}
+
+	/** @param {number} index */
+	at(index) {
+		return this.values[index];
+		// return this.values.at((index + this.cursor) % this.capacity);
+	}
+
+	/** @param {Value} value */
+	append(value) {
+		if (this.limit < this.capacity) {
+			this.values.push(value);
+			return this.limit++;
+		}
+		let index = this.cursor++;
+		this.values[index] = value;
+		this.cursor %= this.capacity;
+		return index;
+	}
+
+	*[Symbol.iterator]() {
+		for (let offset = 0; offset < this.capacity; offset++) {
+			yield this.values[(offset + this.cursor) % this.capacity];
+		}
+	}
+}
 
 test("circular buffer", () => {
 	let vec = new CircularBuffer(5);
@@ -62,7 +100,7 @@ test("linked rank", async () => {
 
 		if (rank.size < m) return;
 		if (rank.expw == null) rank.expw = new LinkedRank(rank.capacity);
-		if (Math.random() <= p) insert(rank.expw, index, valueOf);
+		if (Math.random() < p) insert(rank.expw, index, valueOf);
 	}
 
 	function search(rank, index, valueOf) {
@@ -79,7 +117,6 @@ test("linked rank", async () => {
 		if (rank.expw != null) remove(rank.expw, index);
 
 		if (rank.prev[index] !== rank.next[index]) {
-			// how do I know I actually removed it?
 			rank.size--;
 		}
 

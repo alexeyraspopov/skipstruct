@@ -1,4 +1,8 @@
 {
   "name": "streamlist",
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "picocolors": "^1.0.1",
+    "prettier": "^3.3.2"
+  }
 }

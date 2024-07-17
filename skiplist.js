@@ -12,7 +12,7 @@ export class SkipList {
    */
   constructor(capacity, valueOf, compare, ratio) {
     /** @type {number} */
-    this.capacity = Math.max(0, Math.min(capacity, 2 ** 32 - 1));
+    this.capacity = Math.max(0, Math.min(capacity, 2 ** 25));
     /** @type {number} */
     this.ratio = ratio;
 
@@ -24,18 +24,8 @@ export class SkipList {
     this.head = 0;
     this.tail = 0;
 
-    this.next = new Uint32Array(
-      new ArrayBuffer(
-        Math.min(capacity, 1024) * Uint32Array.BYTES_PER_ELEMENT,
-        { maxByteLength: capacity * Uint32Array.BYTES_PER_ELEMENT },
-      ),
-    );
-    this.prev = new Uint32Array(
-      new ArrayBuffer(
-        Math.min(capacity, 1024) * Uint32Array.BYTES_PER_ELEMENT,
-        { maxByteLength: capacity * Uint32Array.BYTES_PER_ELEMENT },
-      ),
-    );
+    this.next = new Uint32Array(capacity);
+    this.prev = new Uint32Array(capacity);
 
     /** @type {SkipList<Value> | null} */
     this.express = null;
@@ -58,31 +48,15 @@ export class SkipList {
     let point = null;
     if (this.express != null) {
       if (Math.random() < this.ratio) {
-        point = this.express.insert(index);
+        point = this.express.insert(index, value);
       } else if (this.express.size > 0) {
-        point = this.express.findRight(index);
+        point = this.express.findRight(index, value);
       }
     }
 
     let size = this.size++;
 
-    if (
-      this.size <= this.capacity &&
-      this.size * Uint32Array.BYTES_PER_ELEMENT > this.next.buffer.byteLength
-    ) {
-      this.next.buffer.resize(
-        Math.min(this.capacity, this.size + 1024) *
-          Uint32Array.BYTES_PER_ELEMENT,
-      );
-      this.prev.buffer.resize(
-        Math.min(this.capacity, this.size + 1024) *
-          Uint32Array.BYTES_PER_ELEMENT,
-      );
-    }
-
     if (size > 1) {
-      let value = this.getValueOf(index);
-
       if (this.compare(value, this.getValueOf(this.head)) < 0) {
         this.next[index] = this.head;
         this.prev[this.head] = index;
@@ -97,11 +71,7 @@ export class SkipList {
         return null;
       }
 
-      for (
-        let i = 0, p = point ?? this.tail;
-        i < this.size;
-        i++, p = this.prev[p]
-      ) {
+      for (let i = 0, p = point ?? this.tail; i < size; i++, p = this.prev[p]) {
         // if p is tail, we'll skip this first iteration since it was covered by condition above
         if (this.compare(value, this.getValueOf(p)) >= 0) {
           point = this.next[p];
@@ -112,14 +82,13 @@ export class SkipList {
           break;
         }
       }
+
       return point;
     }
 
     if (size == 1) {
       let point;
-      if (
-        this.compare(this.getValueOf(index), this.getValueOf(this.head)) < 0
-      ) {
+      if (this.compare(value, this.getValueOf(this.head)) < 0) {
         this.head = index;
         point = this.tail;
       } else {
@@ -159,9 +128,7 @@ export class SkipList {
   }
 
   /** @param {number} index */
-  findRight(index) {
-    let value = this.getValueOf(index);
-
+  findRight(index, value = this.getValueOf(index)) {
     if (this.compare(value, this.getValueOf(this.head)) < 0) {
       return this.head;
     }
@@ -170,7 +137,10 @@ export class SkipList {
       return null;
     }
 
-    let point = this.express != null ? this.express.findRight(index) : null;
+    let point =
+      this.express != null && this.express.size > 0
+        ? this.express.findRight(index, value)
+        : null;
 
     for (
       let i = 0, p = point ?? this.tail;
@@ -188,9 +158,7 @@ export class SkipList {
   }
 
   /** @param {number} index */
-  findLeft(index) {
-    let value = this.getValueOf(index);
-
+  findLeft(index, value = this.getValueOf(index)) {
     if (this.compare(value, this.getValueOf(this.head)) <= 0) {
       return this.head;
     }
@@ -199,7 +167,10 @@ export class SkipList {
       return null;
     }
 
-    let point = this.express != null ? this.express.findLeft(index) : null;
+    let point =
+      this.express != null && this.express.size > 0
+        ? this.express.findLeft(index, value)
+        : null;
 
     for (
       let i = 0, p = point ?? this.head;
@@ -221,6 +192,34 @@ export class SkipList {
     }
   }
 }
+
+test("a lot of records", async () => {
+  let count = 1000000;
+  let data = [];
+  let access = (p) => data[p];
+  let list = new SkipList(count, access, ascending, 1 / 4);
+
+  // await new Promise((resolve) => setTimeout(resolve, 10_000));
+  // console.log("start");
+
+  console.time("insert");
+  for (let i = 0; i < count; i++) {
+    let value = (Math.random() * 10) | 0;
+    let index = data.push(value) - 1;
+    list.insert(index);
+  }
+  console.timeEnd("insert");
+
+  // console.log(Array.from(hist.entries(), ([s, v]) => [s.size, v]));
+
+  // console.log("stop");
+  // await new Promise((resolve) => setTimeout(resolve, 60_000 * 10));
+
+  // console.log(data.map((v) => String(v).padStart(2, " ")).join(" "));
+  // display(list);
+  // display(list.express);
+  // list.express.express && display(list.express.express);
+});
 
 test("empty to one", () => {
   let list = new SkipList(10, (v) => v, ascending, 0);
@@ -405,25 +404,6 @@ test("find if not insert", () => {
   deepEqual(Array.from(list.express), ["A"]);
 });
 
-test("resize dynamically", () => {
-  let data = [];
-  let list = new SkipList(1024 * 3, (p) => data[p], ascending, 0);
-
-  equal(list.next.buffer.byteLength, 1024 * Uint32Array.BYTES_PER_ELEMENT);
-  equal(list.prev.buffer.byteLength, 1024 * Uint32Array.BYTES_PER_ELEMENT);
-
-  for (let index = 0; index < 1024; index++) {
-    list.insert(data.push(String(index)) - 1);
-  }
-
-  equal(list.size, 1024);
-
-  list.insert(data.push("A") - 1);
-  equal(list.size, 1025);
-  equal(list.next.buffer.byteLength, 2049 * Uint32Array.BYTES_PER_ELEMENT);
-  equal(list.prev.buffer.byteLength, 2049 * Uint32Array.BYTES_PER_ELEMENT);
-});
-
 test("find insertion points", () => {
   let data = ["A", "B", "B", "B", "D", "F"];
   let list = new SkipList(10, (p) => data[p], ascending, 0);
@@ -444,11 +424,17 @@ test("find insertion points", () => {
   equal(list.findLeft(10), 0);
 });
 
+function ascending(a, b) {
+  return a == b ? 0 : a < b ? -1 : a > b ? 1 : 0;
+}
+
 /* node:coverage disable */
 let DEBUG = process.env.DEBUG != null;
 
 function display(list) {
   if (!DEBUG) return;
+
+  let pad = list.capacity > 10 ? 2 : 1;
 
   let vsn = [];
   let isn = [];
@@ -464,10 +450,10 @@ function display(list) {
     isn.push(c);
     vsn.push(
       c == list.head
-        ? color.green(list.getValueOf(c))
+        ? color.green(String(list.getValueOf(c)).padStart(pad, " "))
         : c == list.tail
-          ? color.red(list.getValueOf(c))
-          : list.getValueOf(c),
+          ? color.red(String(list.getValueOf(c)).padStart(pad, " "))
+          : String(list.getValueOf(c)).padStart(pad, " "),
     );
   }
 
@@ -479,10 +465,10 @@ function display(list) {
     isp.push(c);
     vsp.push(
       c == list.head
-        ? color.green(list.getValueOf(c))
+        ? color.green(String(list.getValueOf(c)).padStart(pad, " "))
         : c == list.tail
-          ? color.red(list.getValueOf(c))
-          : list.getValueOf(c),
+          ? color.red(String(list.getValueOf(c)).padStart(pad, " "))
+          : String(list.getValueOf(c)).padStart(pad, " "),
     );
   }
   isn.pop();
@@ -490,21 +476,21 @@ function display(list) {
 
   let firstLine = `${Array.from(list.next, (v, i) => {
     return v == MASK
-      ? color.blue(0)
+      ? color.blue("0".padStart(pad, " "))
       : isn.includes(i)
         ? v == list.tail
-          ? color.red(v)
-          : color.yellow(v)
-        : color.gray(v);
+          ? color.red(String(v).padStart(pad, " "))
+          : color.yellow(String(v).padStart(pad, " "))
+        : color.gray(String(v).padStart(pad, " "));
   }).join(" ")}`;
   let secondLine = `${Array.from(list.prev, (v, i) => {
     return v == MASK
-      ? color.blue(0)
+      ? color.blue("0".padStart(pad, " "))
       : isp.includes(i)
         ? v == list.head
-          ? color.green(v)
-          : color.yellow(v)
-        : color.gray(v);
+          ? color.green(String(v).padStart(pad, " "))
+          : color.yellow(String(v).padStart(pad, " "))
+        : color.gray(String(v).padStart(pad, " "));
   }).join(" ")}`;
   console.log(firstLine);
   console.log(secondLine);

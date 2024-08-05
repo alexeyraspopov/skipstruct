@@ -113,19 +113,33 @@ class SkipList {
   }
 }
 
-test("a lot of records", async () => {
-  let count = 1000000;
+const LARGE_LIST_COUNT = 1_000_000;
+
+test("baseline rank", () => {
+  let count = LARGE_LIST_COUNT;
+  let data = [];
+  let order = (ia, ib) => ascending(data[ia], data[ib]);
+  let rank = new Uint32Array(count);
+
+  for (let i = 0; i < count; i++) {
+    let value = (Math.random() * 10) | 0;
+    let index = data.push(value) - 1;
+    rank[i] = index;
+  }
+  rank.sort(order);
+});
+
+test("a lot of records", () => {
+  let count = LARGE_LIST_COUNT;
   let data = [];
   let order = (ia, ib) => ascending(data[ia], data[ib]);
   let list = new SkipList(count, 1 / 8, order);
 
-  console.time("insert");
   for (let i = 0; i < count; i++) {
     let value = (Math.random() * 10) | 0;
     let index = data.push(value) - 1;
     list.insert(index);
   }
-  console.timeEnd("insert");
 });
 
 function ascending(a, b) {

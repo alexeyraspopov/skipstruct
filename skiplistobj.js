@@ -188,25 +188,12 @@ test("insert in order", () => {
   // display(list);
 });
 
-test("a lot", async () => {
+test("a lot of records", async () => {
   let count = 1000000;
   let list = new SkipList(ascending, 1 / 4);
-
-  // await sleep(10_000);
-  // console.log("start");
 
   for (let i = 0; i < count; i++) {
     let value = (Math.random() * 10) | 0;
     list.insert(value);
   }
-
-  // console.log(Array.from(hist.entries(), ([s, v]) => [s.size, v]));
-
-  // console.log("stop");
-  // await sleep(60_000 * 10);
-
-  // console.log(data.map((v) => String(v).padStart(2, " ")).join(" "));
-  // display(list);
-  // display(list.express);
-  // list.express.express && display(list.express.express);
 });

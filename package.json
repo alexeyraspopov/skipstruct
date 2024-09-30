@@ -1,6 +1,13 @@
 {
-  "name": "streamlist",
+  "name": "skip-list",
   "type": "module",
+  "main": "skiplistflat.js",
+  "keywords": [
+    "skiplist",
+    "skip-list",
+    "data-structure",
+    "probabilistic"
+  ],
   "devDependencies": {
     "picocolors": "^1.0.1",
     "prettier": "^3.3.2"

@@ -12,7 +12,7 @@ export class SkipList {
     this.ratio = ratio;
     this.compare = compare;
 
-    this.maxLevel = Math.round(Math.log(capacity) / Math.log(1 / ratio)) + 1;
+    this.maxLevel = Math.floor(Math.log(capacity) / Math.log(1 / ratio)) + 1;
     this.currentLevel = 0;
 
     let metalength = this.maxLevel * Uint32Array.BYTES_PER_ELEMENT;
@@ -137,7 +137,6 @@ export class SkipList {
             next[prev] = next[index];
           }
           if (index === tail) {
-            // is it legal?
             this.tails[level] = prev ?? head;
           }
           if (size === 1) this.currentLevel--;
@@ -172,6 +171,7 @@ export class SkipList {
         if (curr === tail) break;
         curr = next[curr];
       }
+      if (curr === head && level === 0) return head;
     }
     return point;
   }
@@ -272,7 +272,7 @@ test("find insertion points", () => {
   // right
   equal(
     list.bisect((c) => list.compare(6, c) < 0),
-    null /* 0 */,
+    0,
   );
   equal(
     list.bisect((c) => list.compare(7, c) < 0),
@@ -290,7 +290,7 @@ test("find insertion points", () => {
   // left
   equal(
     list.bisect((c) => list.compare(6, c) <= 0),
-    null /* 0 */,
+    0,
   );
   let left;
   left = list.bisect((c) => list.compare(7, c) <= 0);
@@ -305,7 +305,7 @@ test("find insertion points", () => {
   );
   equal(
     list.bisect((c) => list.compare(10, c) <= 0),
-    null /* 0 */,
+    0,
   );
 });
 

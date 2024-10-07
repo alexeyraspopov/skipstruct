@@ -1,7 +1,4 @@
-import { test } from "node:test";
-import { deepEqual, equal } from "node:assert/strict";
-
-export class SkipList {
+export class FixedSkipList {
   /**
    * @param {number} capacity
    * @param {number} ratio
@@ -12,19 +9,33 @@ export class SkipList {
     this.ratio = ratio;
     this.compare = compare;
 
-    this.maxLevel = Math.floor(Math.log(capacity) / Math.log(1 / ratio)) + 1;
     this.currentLevel = 0;
 
-    let metalength = this.maxLevel * Uint32Array.BYTES_PER_ELEMENT;
+    let maxLevel = Math.floor(Math.log(capacity) / Math.log(1 / ratio)) + 1;
+    let metalength = maxLevel * Uint32Array.BYTES_PER_ELEMENT;
     let metas = new ArrayBuffer(3 * metalength);
-    this.heads = new Uint32Array(metas, 0 * metalength, this.maxLevel);
-    this.tails = new Uint32Array(metas, 1 * metalength, this.maxLevel);
-    this.sizes = new Uint32Array(metas, 2 * metalength, this.maxLevel);
+    this.heads = new Uint32Array(metas, 0 * metalength, maxLevel);
+    this.tails = new Uint32Array(metas, 1 * metalength, maxLevel);
+    this.sizes = new Uint32Array(metas, 2 * metalength, maxLevel);
 
-    let lanelength = this.capacity * Uint32Array.BYTES_PER_ELEMENT;
-    let lanes = new ArrayBuffer(this.maxLevel * lanelength);
-    this.nexts = Array.from({ length: this.maxLevel }, (_, level) => {
-      return new Uint32Array(lanes, level * lanelength, this.capacity);
+    let mli = maxLevel - 1;
+    let table = new Float64Array(mli);
+    for (let i = 0; i < mli; i++) table[i] = ratio ** (i + 1);
+    this.randomLevel = (rand) => {
+      let lo = 0;
+      let hi = mli;
+      while (lo < hi) {
+        let mid = (lo + hi) >>> 1;
+        if (rand <= table[mid]) lo = mid + 1;
+        else hi = mid;
+      }
+      return lo;
+    };
+
+    let lanelength = capacity * Uint32Array.BYTES_PER_ELEMENT;
+    let lanes = new ArrayBuffer(maxLevel * lanelength);
+    this.nexts = Array.from({ length: maxLevel }, (_, level) => {
+      return new Uint32Array(lanes, level * lanelength, capacity);
     });
   }
 
@@ -49,10 +60,7 @@ export class SkipList {
    */
   insert(index) {
     let compare = this.compare;
-
-    let insertLevel = 0;
-    while (Math.random() < this.ratio && insertLevel < this.maxLevel)
-      insertLevel++;
+    let insertLevel = this.randomLevel(Math.random());
 
     this.currentLevel = Math.max(insertLevel, this.currentLevel);
 
@@ -184,131 +192,4 @@ export class SkipList {
       yield p;
     }
   }
-}
-
-const LARGE_LIST_COUNT = 1000000;
-
-test("baseline rank", () => {
-  let count = LARGE_LIST_COUNT;
-  let data = [];
-  let order = (ia, ib) => ascending(data[ia], data[ib]);
-  let rank = new Uint32Array(count);
-
-  for (let i = 0; i < count; i++) {
-    let value = (Math.random() * 10) | 0;
-    let index = data.push(value) - 1;
-    rank[i] = index;
-  }
-  rank.sort(order);
-});
-
-test("a lot of records", () => {
-  let count = LARGE_LIST_COUNT;
-  let data = [];
-  let order = (ia, ib) => ascending(data[ia], data[ib]);
-  let list = new SkipList(count, 1 / 8, order);
-
-  for (let i = 0; i < count; i++) {
-    let value = (Math.random() * 10) | 0;
-    let index = data.push(value) - 1;
-    list.insert(index);
-  }
-});
-
-test("empty to one", () => {
-  let list = new SkipList(10, 0, ascending);
-  equal(list.size, 0);
-  list.insert("4");
-  equal(list.heads[0], list.tails[0]);
-  equal(list.size, 1);
-});
-
-test("insert left and insert right", () => {
-  let listA = new SkipList(10, 0, ascending);
-  listA.insert(4);
-  listA.insert(3);
-  listA.insert(2);
-  console.log(listA.nexts[0], listA.heads[0], listA.tails[0]);
-  let listB = new SkipList(10, 0, ascending);
-  listB.insert(4);
-  listB.insert(5);
-  listB.insert(6);
-  console.log(listB.nexts[0], listB.heads[0], listB.tails[0]);
-});
-
-test("remove from list", () => {
-  let list = new SkipList(10, 1 / 4, ascending);
-
-  list.insert(4);
-  list.insert(8);
-  list.insert(7);
-  list.insert(5);
-  equal(list.size, 4);
-  deepEqual(Array.from(list), [4, 5, 7, 8]);
-  list.remove(5);
-  equal(list.size, 3);
-  deepEqual(Array.from(list), [4, 7, 8]);
-  list.remove(4);
-  equal(list.size, 2);
-  deepEqual(Array.from(list), [7, 8]);
-  list.remove(8);
-  equal(list.size, 1);
-  deepEqual(Array.from(list), [7]);
-  list.remove(7);
-  equal(list.size, 0);
-  deepEqual(Array.from(list), []);
-});
-
-test("find insertion points", () => {
-  let data = ["A", "B", "B", "B", "D", "F"];
-  let order = (ia, ib) => ascending(data[ia], data[ib]);
-  let list = new SkipList(10, 1 / 2, order);
-  for (let i = 0; i < data.length; i++) list.insert(i);
-  /*         6    7    8    9   10 */
-  data.push("9", "B", "E", "G", "A");
-
-  equal(list.size, 6);
-
-  // right
-  equal(
-    list.bisect((c) => list.compare(6, c) < 0),
-    0,
-  );
-  equal(
-    list.bisect((c) => list.compare(7, c) < 0),
-    3,
-  );
-  equal(
-    list.bisect((c) => list.compare(8, c) < 0),
-    4,
-  );
-  equal(
-    list.bisect((c) => list.compare(9, c) < 0),
-    null,
-  );
-
-  // left
-  equal(
-    list.bisect((c) => list.compare(6, c) <= 0),
-    0,
-  );
-  let left;
-  left = list.bisect((c) => list.compare(7, c) <= 0);
-  equal(left, 0);
-  equal(list.nexts[0][left], 1);
-  left = list.bisect((c) => list.compare(8, c) <= 0);
-  equal(left, 4);
-  equal(list.nexts[0][left], 5);
-  equal(
-    list.bisect((c) => list.compare(9, c) <= 0),
-    null,
-  );
-  equal(
-    list.bisect((c) => list.compare(10, c) <= 0),
-    0,
-  );
-});
-
-function ascending(a, b) {
-  return a == b ? 0 : a < b ? -1 : a > b ? 1 : 0;
 }

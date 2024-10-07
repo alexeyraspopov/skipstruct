@@ -1,7 +1,6 @@
 {
-  "name": "skip-list",
+  "name": "skipstruct",
   "type": "module",
-  "main": "skiplistflat.js",
   "keywords": [
     "skiplist",
     "skip-list",
@@ -9,7 +8,13 @@
     "probabilistic"
   ],
   "devDependencies": {
+    "gulp": "^5.0.0",
     "picocolors": "^1.0.1",
-    "prettier": "^3.3.2"
+    "prettier": "^3.3.2",
+    "rollup": "^4.24.0"
+  },
+  "prettier": {
+    "printWidth": 100,
+    "proseWrap": "always"
   }
 }

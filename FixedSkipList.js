@@ -1,26 +1,36 @@
+/**
+ * Fixed capacity skip list. It doesn't contain the values, it uses numeric keys to maintain the
+ * order of values (defined by the comparator). Fixed data structure allocates memory in advance
+ * so it is most suitable for cases where constant volume of data is expected.
+ */
 export class FixedSkipList {
   /**
-   * @param {number} capacity
-   * @param {number} ratio
-   * @param {(a: number, b: number) => -1 | 0 | 1} compare
+   * @param {number} capacity maximum number of values that can be stored in the list
+   * @param {number} ratio probability of promoting a value to next layer; defines size ratio between layers; should be more than 0 and less than 1; most commonly used values are 1/2, 1/4, 1/8.
+   * @param {(a: number, b: number) => -1 | 0 | 1} compare comparator function that receives indices of values
    */
   constructor(capacity, ratio, compare) {
     this.capacity = capacity;
     this.ratio = ratio;
     this.compare = compare;
 
+    /** @protected */
     this.currentLevel = 0;
 
     let maxLevel = Math.floor(Math.log(capacity) / Math.log(1 / ratio)) + 1;
     let metalength = maxLevel * Uint32Array.BYTES_PER_ELEMENT;
     let metas = new ArrayBuffer(3 * metalength);
+    /** @protected */
     this.heads = new Uint32Array(metas, 0 * metalength, maxLevel);
+    /** @protected */
     this.tails = new Uint32Array(metas, 1 * metalength, maxLevel);
+    /** @protected */
     this.sizes = new Uint32Array(metas, 2 * metalength, maxLevel);
 
     let mli = maxLevel - 1;
     let table = new Float64Array(mli);
     for (let i = 0; i < mli; i++) table[i] = ratio ** (i + 1);
+    /** @protected */
     this.randomLevel = (rand) => {
       let lo = 0;
       let hi = mli;
@@ -34,6 +44,7 @@ export class FixedSkipList {
 
     let lanelength = capacity * Uint32Array.BYTES_PER_ELEMENT;
     let lanes = new ArrayBuffer(maxLevel * lanelength);
+    /** @protected */
     this.nexts = Array.from({ length: maxLevel }, (_, level) => {
       return new Uint32Array(lanes, level * lanelength, capacity);
     });
@@ -56,6 +67,16 @@ export class FixedSkipList {
   }
 
   /**
+   * Whenever a new value added to a collection, insert its index to the skiplist.
+   *
+   * ```js
+   * let slist = new FixedSkipList(1000, 1 / 4, ascending);
+   * let values = [];
+   *
+   * let index = values.push(newValue) - 1;
+   * slist.insert(index);
+   * ```
+   *
    * @param {number} index
    */
   insert(index) {
@@ -122,6 +143,8 @@ export class FixedSkipList {
   }
 
   /**
+   * Remove previously inserted index from all layers.
+   *
    * @param {number} index
    */
   remove(index) {
@@ -158,6 +181,8 @@ export class FixedSkipList {
   }
 
   /**
+   * Utilizing layered structure of the skip list, find insertion point for an arbitrary predicate function.
+   *
    * @param {(index: number) => boolean} predicate
    */
   bisect(predicate) {

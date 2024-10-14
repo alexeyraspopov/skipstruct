@@ -13,6 +13,7 @@ export async function build() {
   await Promise.all([
     pipeline(src(["build/*.js"]), declarations, dest("build")),
     pipeline(src("LICENSE"), dest("build")),
+    pipeline(src("README.md"), map(generateReadmeMD), dest("build")),
     pipeline(src("package.json"), map(generatePackageJSON), dest("build")),
   ]);
 }
@@ -40,8 +41,33 @@ async function* declarations(source) {
   }
 }
 
+function generateReadmeMD(contents) {
+  return `
+# skipstruct
+
+Set of efficient data structures based on skip lists.
+
+    npm install skipstruct
+
+> Skip lists are a probabilistic data structure that seem likely to supplant
+> balanced trees as the implementation method of choice for many applications.
+> Skip list algorithms have the same asymptotic expected time bounds as
+> balanced trees and are simpler, faster and use less space.
+>
+> — William Pugh, Concurrent Maintenance of Skip Lists (1989)
+
+Provided skip list implementation is the most efficient out there in terms of
+memory and CPU consumption. What makes it so good is a custom pointer system
+[originally described][pointer-system] by Guillaume Plique.
+
+Read more [on the website](https://alexeyraspopov.github.io/skipstruct/).
+
+[pointer-system]: https://yomguithereal.github.io/posts/lru-cache#a-custom-pointer-system
+`.trimStart();
+}
+
 function generatePackageJSON(contents) {
-  let pkg = JSON.parse(contents.toString());
+  let pkg = JSON.parse(contents);
   let newPkg = {
     name: pkg.name,
     version: pkg.version,

@@ -20,31 +20,34 @@ export class FixedSkipList {
     let maxLevel = Math.floor(Math.log(capacity) / Math.log(1 / ratio)) + 1;
     let metalength = maxLevel * Uint32Array.BYTES_PER_ELEMENT;
     let metas = new ArrayBuffer(3 * metalength);
-    /** @protected */
+    /**
+     * @protected
+     * @type {Uint32Array}
+     */
     this.heads = new Uint32Array(metas, 0 * metalength, maxLevel);
-    /** @protected */
+    /**
+     * @protected
+     * @type {Uint32Array}
+     */
     this.tails = new Uint32Array(metas, 1 * metalength, maxLevel);
-    /** @protected */
+    /**
+     * @protected
+     * @type {Uint32Array}
+     */
     this.sizes = new Uint32Array(metas, 2 * metalength, maxLevel);
 
-    let mli = maxLevel - 1;
-    let table = new Float64Array(mli);
-    for (let i = 0; i < mli; i++) table[i] = ratio ** (i + 1);
-    /** @protected */
-    this.randomLevel = (rand) => {
-      let lo = 0;
-      let hi = mli;
-      while (lo < hi) {
-        let mid = (lo + hi) >>> 1;
-        if (rand <= table[mid]) lo = mid + 1;
-        else hi = mid;
-      }
-      return lo;
-    };
+    /**
+     * @protected
+     * @type {() => number}
+     */
+    this.randomLevel = randomLevelGenerator(maxLevel - 1, ratio);
 
     let lanelength = capacity * Uint32Array.BYTES_PER_ELEMENT;
     let lanes = new ArrayBuffer(maxLevel * lanelength);
-    /** @protected */
+    /**
+     * @protected
+     * @type {Array<Uint32Array>}
+     */
     this.nexts = Array.from({ length: maxLevel }, (_, level) => {
       return new Uint32Array(lanes, level * lanelength, capacity);
     });
@@ -81,7 +84,7 @@ export class FixedSkipList {
    */
   insert(index) {
     let compare = this.compare;
-    let insertLevel = this.randomLevel(Math.random());
+    let insertLevel = this.randomLevel();
 
     this.currentLevel = Math.max(insertLevel, this.currentLevel);
 
@@ -187,6 +190,7 @@ export class FixedSkipList {
    */
   bisect(predicate) {
     let size, head, tail, next;
+    /** @type {number | null} */
     let point = null;
     for (let level = this.currentLevel; level >= 0; level--) {
       size = this.sizes[level];
@@ -217,4 +221,24 @@ export class FixedSkipList {
       yield p;
     }
   }
+}
+
+/**
+ * @param {number} count
+ * @param {number} ratio
+ */
+function randomLevelGenerator(count, ratio) {
+  let table = new Float64Array(count);
+  for (let i = 0; i < count; i++) table[i] = ratio ** (i + 1);
+  return function randomLevel() {
+    let x = Math.random();
+    let lo = 0;
+    let hi = count;
+    while (lo < hi) {
+      let mid = (lo + hi) >>> 1;
+      if (x <= table[mid]) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo;
+  };
 }

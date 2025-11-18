@@ -123,6 +123,53 @@ test("find insertion points", () => {
   );
 });
 
+test("find exact point", () => {
+  let data = ["A", "B", "B", "B", "D", "F"];
+  let order = (ia, ib) => ascending(data[ia], data[ib]);
+  let list = new SkipList(10, 1 / 2, order);
+  let matcher = (letter) => (index) => data[index] === letter;
+
+  equal(list.search(matcher("A")), null);
+  list.insert(0);
+  equal(list.search(matcher("A")), 0);
+  list.insert(1);
+  equal(list.search(matcher("A")), 0);
+  equal(list.search(matcher("B")), 1);
+  equal(list.search(matcher("D")), null);
+  list.insert(2);
+  equal(list.search(matcher("A")), 0);
+  equal(list.search(matcher("B")), 1);
+  equal(list.search(matcher("D")), null);
+  list.insert(3);
+  equal(list.search(matcher("A")), 0);
+  equal(list.search(matcher("B")), 1);
+  equal(list.search(matcher("D")), null);
+  list.insert(4);
+  equal(list.search(matcher("A")), 0);
+  equal(list.search(matcher("B")), 1);
+  equal(list.search(matcher("D")), 4);
+  list.insert(5);
+  equal(list.search(matcher("A")), 0);
+  equal(list.search(matcher("B")), 1);
+  equal(list.search(matcher("D")), 4);
+  equal(list.search(matcher("F")), 5);
+  list.remove(0);
+  equal(list.search(matcher("A")), null);
+  equal(list.search(matcher("B")), 1);
+  equal(list.search(matcher("D")), 4);
+  equal(list.search(matcher("F")), 5);
+  list.remove(1);
+  equal(list.search(matcher("A")), null);
+  equal(list.search(matcher("B")), 2);
+  equal(list.search(matcher("D")), 4);
+  equal(list.search(matcher("F")), 5);
+  list.remove(5);
+  equal(list.search(matcher("A")), null);
+  equal(list.search(matcher("B")), 2);
+  equal(list.search(matcher("D")), 4);
+  equal(list.search(matcher("F")), null);
+});
+
 function ascending(a, b) {
   return a == b ? 0 : a < b ? -1 : a > b ? 1 : 0;
 }

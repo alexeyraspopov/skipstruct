@@ -127,7 +127,7 @@ test("find exact point", () => {
   let data = ["A", "B", "B", "B", "D", "F"];
   let order = (ia, ib) => ascending(data[ia], data[ib]);
   let list = new SkipList(10, 1 / 2, order);
-  let matcher = (letter) => (index) => data[index] === letter;
+  let matcher = (letter) => (index) => ascending(data[index], letter);
 
   equal(list.search(matcher("A")), null);
   list.insert(0);

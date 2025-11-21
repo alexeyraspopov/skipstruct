@@ -214,33 +214,28 @@ export class FixedSkipList {
   }
 
   /**
-   * Find first exact point that satisfies predicate function.
+   * Find first exact point that satisfies match function.
    *
-   * @param {(index: number) => boolean} predicate
+   * @param {(index: number) => -1 | 0 | 1} match
    */
-  search(predicate) {
-    let size, head, tail, next;
+  search(match) {
     /** @type {number | null} */
-    let point = null;
-    for (let level = this.currentLevel; level >= 0; level--) {
+    let found = null;
+    for (let level = this.currentLevel, head, tail, next, size, curr, edge; level >= 0; level--) {
       size = this.sizes[level];
       head = this.heads[level];
       tail = this.tails[level];
       next = this.nexts[level];
-      let curr = point ?? head;
-      let prev = null;
-      if (level === 0 && size > 0 && predicate(head)) return head;
-      for (let i = 0; i < size; i++) {
-        if (predicate(curr)) {
-          point = prev;
-          break;
-        }
-        prev = curr;
-        if (curr === tail) break;
+      curr = edge ?? head;
+      for (let i = 0, cmp; i < size && edge !== tail; i++) {
+        cmp = match(curr);
+        if (cmp === 0) found = curr;
+        if (cmp >= 0) break;
+        edge = curr;
         curr = next[curr];
       }
     }
-    return point != null ? this.nexts[0][point] : null;
+    return found;
   }
 
   *[Symbol.iterator]() {

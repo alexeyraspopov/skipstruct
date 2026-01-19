@@ -10,8 +10,11 @@ export class FixedSkipList {
    * @param {(a: number, b: number) => -1 | 0 | 1} compare comparator function that receives indices of values
    */
   constructor(capacity, ratio, compare) {
+    /** @type {number} */
     this.capacity = capacity;
+    /** @type {number} */
     this.ratio = ratio;
+    /** @type {(a: number, b: number) => -1 | 0 | 1} */
     this.compare = compare;
 
     /** @protected */
@@ -88,7 +91,7 @@ export class FixedSkipList {
 
     this.currentLevel = Math.max(insertLevel, this.currentLevel);
 
-    let size, head, tail, next, prev, curr;
+    let size, head, tail, next, last, curr;
     let insert = false;
     let point = null;
     for (let level = this.currentLevel; level >= 0; level--) {
@@ -115,23 +118,23 @@ export class FixedSkipList {
           }
         } else {
           curr = point;
-          prev = null;
+          last = null;
           if (curr == null) {
-            prev = head;
-            curr = next[prev];
+            last = head;
+            curr = next[last];
           }
 
           for (let i = 0; i < size; i++) {
             if (compare(index, curr) < 0) {
-              point = prev;
+              point = last;
               if (insert) {
                 // if we started with prev being null, the assumption is we always skip first iteration
-                next[prev] = index;
+                next[last] = index;
                 next[index] = curr;
               }
               break;
             }
-            prev = curr;
+            last = curr;
             curr = next[curr];
           }
         }
@@ -159,24 +162,24 @@ export class FixedSkipList {
       tail = this.tails[level];
       next = this.nexts[level];
       let curr = point ?? head;
-      let prev = null;
+      let last = null;
       for (let i = 0; i < size; i++) {
         if (curr === index) {
-          point = prev;
+          point = last;
           this.sizes[level]--;
           if (index === head) {
             this.heads[level] = next[index];
           }
-          if (prev != null) {
-            next[prev] = next[index];
+          if (last != null) {
+            next[last] = next[index];
           }
           if (index === tail) {
-            this.tails[level] = prev ?? head;
+            this.tails[level] = last ?? head;
           }
           if (size === 1) this.currentLevel--;
           break;
         }
-        prev = curr;
+        last = curr;
         if (curr === tail) break;
         curr = next[curr];
       }
@@ -198,13 +201,13 @@ export class FixedSkipList {
       tail = this.tails[level];
       next = this.nexts[level];
       let curr = point ?? head;
-      let prev = null;
+      let last = null;
       for (let i = 0; i < size; i++) {
         if (predicate(curr)) {
-          point = prev;
+          point = last;
           break;
         }
-        prev = curr;
+        last = curr;
         if (curr === tail) break;
         curr = next[curr];
       }
@@ -221,17 +224,17 @@ export class FixedSkipList {
   search(match) {
     /** @type {number | null} */
     let found = null;
-    for (let level = this.currentLevel, head, tail, next, size, curr, edge; level >= 0; level--) {
+    for (let level = this.currentLevel, head, tail, next, size, curr, last; level >= 0; level--) {
       size = this.sizes[level];
       head = this.heads[level];
       tail = this.tails[level];
       next = this.nexts[level];
-      curr = edge ?? head;
-      for (let i = 0, cmp; i < size && edge !== tail; i++) {
+      curr = last ?? head;
+      for (let i = 0, cmp; i < size && last !== tail; i++) {
         cmp = match(curr);
         if (cmp === 0) found = curr;
         if (cmp >= 0) break;
-        edge = curr;
+        last = curr;
         curr = next[curr];
       }
     }

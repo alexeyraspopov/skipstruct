@@ -54,6 +54,12 @@ export class FixedSkipList {
     this.nexts = Array.from({ length: maxLevel }, (_, level) => {
       return new Uint32Array(lanes, level * lanelength, capacity);
     });
+
+    /**
+     * @protected
+     * @type {Array<Uint32Array>}
+     */
+    this.prevs = [new Uint32Array(capacity)];
   }
 
   get size() {
@@ -70,6 +76,10 @@ export class FixedSkipList {
 
   get next() {
     return this.nexts[0];
+  }
+
+  get prev() {
+    return this.prevs[0];
   }
 
   /**
@@ -91,7 +101,7 @@ export class FixedSkipList {
 
     this.currentLevel = Math.max(insertLevel, this.currentLevel);
 
-    let size, head, tail, next, last, curr;
+    let size, head, tail, next, prev, last, curr;
     let insert = false;
     let point = null;
     for (let level = this.currentLevel; level >= 0; level--) {
@@ -100,6 +110,7 @@ export class FixedSkipList {
       head = this.heads[level];
       tail = this.tails[level];
       next = this.nexts[level];
+      prev = this.prevs[level];
 
       if (insert) this.sizes[level]++;
 
@@ -109,12 +120,18 @@ export class FixedSkipList {
           if (insert) {
             this.heads[level] = index;
             next[index] = head;
+            if (level === 0) {
+              prev[head] = index;
+            }
           }
         } else if (compare(index, tail) >= 0) {
           point = tail;
           if (insert) {
             this.tails[level] = index;
             next[tail] = index;
+            if (level === 0) {
+              prev[index] = tail;
+            }
           }
         } else {
           curr = point;
@@ -128,9 +145,13 @@ export class FixedSkipList {
             if (compare(index, curr) < 0) {
               point = last;
               if (insert) {
-                // if we started with prev being null, the assumption is we always skip first iteration
+                // if we started with last being null, the assumption is we always skip first iteration
                 next[last] = index;
                 next[index] = curr;
+                if (level === 0) {
+                  prev[index] = last;
+                  prev[curr] = index;
+                }
               }
               break;
             }
@@ -154,16 +175,15 @@ export class FixedSkipList {
    * @param {number} index
    */
   remove(index) {
-    let size, head, tail, next;
+    let size, head, tail, next, prev;
     let point = null;
     for (let level = this.currentLevel; level >= 0; level--) {
       size = this.sizes[level];
       head = this.heads[level];
       tail = this.tails[level];
       next = this.nexts[level];
-      let curr = point ?? head;
-      let last = null;
-      for (let i = 0; i < size; i++) {
+      prev = this.prevs[level];
+      for (let i = 0, curr = point ?? head, last = null; i < size; i++) {
         if (curr === index) {
           point = last;
           this.sizes[level]--;
@@ -171,6 +191,9 @@ export class FixedSkipList {
             this.heads[level] = next[index];
           }
           if (last != null) {
+            if (level === 0) {
+              prev[next[index]] = last;
+            }
             next[last] = next[index];
           }
           if (index === tail) {
@@ -241,13 +264,36 @@ export class FixedSkipList {
     return found;
   }
 
+  /**
+   * @param {number} [start]
+   * @param {number} [limit]
+   */
+  *forwards(start, limit) {
+    yield* iterate(this.next, start ?? this.head, this.tail, limit ?? this.size);
+  }
+
+  /**
+   * @param {number} [start]
+   * @param {number} [limit]
+   */
+  *backwards(start, limit) {
+    yield* iterate(this.prev, start ?? this.tail, this.head, limit ?? this.size);
+  }
+
   *[Symbol.iterator]() {
-    let size = this.sizes[0];
-    let head = this.heads[0];
-    let next = this.nexts[0];
-    for (let i = 0, p = head; i < size; i++, p = next[p]) {
-      yield p;
-    }
+    yield* iterate(this.next, this.head, this.tail, this.size);
+  }
+}
+
+/**
+ * @param {Uint32Array} pointers
+ * @param {number} start
+ * @param {number} finish
+ * @param {number} limit
+ */
+function* iterate(pointers, start, finish, limit) {
+  for (let i = 0, curr = start, last; i < limit && last !== finish; i++, curr = pointers[curr]) {
+    yield (last = curr);
   }
 }
 

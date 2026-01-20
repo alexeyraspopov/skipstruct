@@ -34,7 +34,7 @@ test("a lot of records", () => {
 test("empty to one", () => {
   let list = new SkipList(10, 0, ascending);
   equal(list.size, 0);
-  list.insert("4");
+  list.insert(4);
   equal(list.heads[0], list.tails[0]);
   equal(list.size, 1);
 });
@@ -44,10 +44,12 @@ test("insert left and insert right", () => {
   listA.insert(4);
   listA.insert(3);
   listA.insert(2);
+  deepEqual(Array.from(listA), [2, 3, 4]);
   let listB = new SkipList(10, 0, ascending);
   listB.insert(4);
   listB.insert(5);
   listB.insert(6);
+  deepEqual(Array.from(listB), [4, 5, 6]);
 });
 
 test("remove from list", () => {
@@ -168,6 +170,35 @@ test("find exact point", () => {
   equal(list.search(matcher("B")), 2);
   equal(list.search(matcher("D")), 4);
   equal(list.search(matcher("F")), null);
+});
+
+test("directions", () => {
+  let data = [];
+  let order = (ia, ib) => ascending(data[ia], data[ib]);
+  let list = new SkipList(5, 1 / 8, order);
+
+  for (let value of ["a", "b", "c", "d", "e"]) {
+    let index = data.push(value) - 1;
+    list.insert(index);
+  }
+
+  deepEqual(Array.from(list.forwards()), [0, 1, 2, 3, 4]);
+  deepEqual(Array.from(list.backwards()), [0, 1, 2, 3, 4].reverse());
+  list.remove(1);
+  deepEqual(Array.from(list.forwards()), [0, 2, 3, 4]);
+  deepEqual(Array.from(list.backwards()), [0, 2, 3, 4].reverse());
+  list.remove(4);
+  deepEqual(Array.from(list.forwards()), [0, 2, 3]);
+  deepEqual(Array.from(list.backwards()), [0, 2, 3].reverse());
+  list.remove(0);
+  deepEqual(Array.from(list.forwards()), [2, 3]);
+  deepEqual(Array.from(list.backwards()), [2, 3].reverse());
+  list.remove(3);
+  deepEqual(Array.from(list.forwards()), [2]);
+  deepEqual(Array.from(list.backwards()), [2].reverse());
+  list.remove(2);
+  deepEqual(Array.from(list.forwards()), []);
+  deepEqual(Array.from(list.backwards()), [].reverse());
 });
 
 function ascending(a, b) {

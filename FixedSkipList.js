@@ -240,25 +240,28 @@ export class FixedSkipList {
   }
 
   /**
-   * Find first exact point that satisfies match function.
+   * Find first or last exact point that satisfies match function.
    *
    * @param {(index: number) => -1 | 0 | 1} match
    */
-  search(match) {
-    /** @type {number | null} */
-    let found = null;
-    for (let level = this.currentLevel, head, tail, next, size, curr, last; level >= 0; level--) {
+  search(match, trailing = false) {
+    let head, tail, next, size;
+    let last = -1;
+    let found = -1;
+    let edge = trailing ? 1 : 0;
+    for (let level = this.currentLevel; level >= 0; level--) {
       size = this.sizes[level];
       head = this.heads[level];
       tail = this.tails[level];
       next = this.nexts[level];
-      curr = last ?? head;
-      for (let i = 0, cmp; i < size && last !== tail; i++) {
+      for (
+        let i = 0, curr = last > -1 ? last : head, cmp = 0;
+        i < size && last !== tail;
+        i++, last = curr, curr = next[curr]
+      ) {
         cmp = match(curr);
         if (cmp === 0) found = curr;
-        if (cmp >= 0) break;
-        last = curr;
-        curr = next[curr];
+        if (cmp >= edge) break;
       }
     }
     return found;

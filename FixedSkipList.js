@@ -240,9 +240,60 @@ export class FixedSkipList {
   }
 
   /**
+   * @param {(index: number) => -1 | 0 | 1} match
+   */
+  bisectLeft(match) {
+    let head, tail, next, size;
+    let last = -1;
+    let found = -1;
+    for (let level = this.currentLevel; level >= 0; level--) {
+      size = this.sizes[level];
+      head = this.heads[level];
+      tail = this.tails[level];
+      next = this.nexts[level];
+      for (
+        let i = 0, curr = last > -1 ? last : head, cmp = 0;
+        i < size && last !== tail;
+        i++, last = curr, curr = next[curr]
+      ) {
+        cmp = match(curr);
+        if (cmp <= 0) found = curr;
+        if (cmp <= 0) break;
+      }
+    }
+    return found;
+  }
+
+  /**
+   * @param {(index: number) => -1 | 0 | 1} match
+   */
+  bisectRight(match) {
+    let head, tail, next, size;
+    let last = -1;
+    let found = -1;
+    for (let level = this.currentLevel; level >= 0; level--) {
+      size = this.sizes[level];
+      head = this.heads[level];
+      tail = this.tails[level];
+      next = this.nexts[level];
+      for (
+        let i = 0, curr = last > -1 ? last : head, cmp = 0;
+        i < size && last !== tail;
+        i++, last = curr, curr = next[curr]
+      ) {
+        cmp = match(curr);
+        if (cmp < 0) found = curr;
+        if (cmp < 0) break;
+      }
+    }
+    return found;
+  }
+
+  /**
    * Find first or last exact point that satisfies match function.
    *
    * @param {(index: number) => -1 | 0 | 1} match
+   * @param {boolean} trailing
    */
   search(match, trailing = false) {
     let head, tail, next, size;

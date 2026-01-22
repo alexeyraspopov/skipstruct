@@ -128,8 +128,8 @@ test("find insertion points", () => {
 test("find exact point", () => {
   let data = ["A", "B", "B", "B", "D", "F"];
   let order = (ia, ib) => ascending(data[ia], data[ib]);
-  let list = new SkipList(10, 1 / 2, order);
-  let matcher = (letter) => (index) => ascending(data[index], letter);
+  let list = new SkipList(8, 1 / 2, order);
+  let matcher = (letter) => (index) => ascending(letter, data[index]);
 
   equal(list.search(matcher("A")), -1);
   list.insert(0);

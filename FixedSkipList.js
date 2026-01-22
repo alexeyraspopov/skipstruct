@@ -248,7 +248,7 @@ export class FixedSkipList {
     let head, tail, next, size;
     let last = -1;
     let found = -1;
-    let edge = trailing ? 1 : 0;
+    let edge = trailing ? -1 : 0;
     for (let level = this.currentLevel; level >= 0; level--) {
       size = this.sizes[level];
       head = this.heads[level];
@@ -261,7 +261,7 @@ export class FixedSkipList {
       ) {
         cmp = match(curr);
         if (cmp === 0) found = curr;
-        if (cmp >= edge) break;
+        if (cmp <= edge) break;
       }
     }
     return found;

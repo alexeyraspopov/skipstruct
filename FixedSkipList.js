@@ -210,36 +210,6 @@ export class FixedSkipList {
   }
 
   /**
-   * Utilizing layered structure of the skip list, find insertion point for an arbitrary predicate function.
-   *
-   * @param {(index: number) => boolean} predicate
-   */
-  bisect(predicate) {
-    let size, head, tail, next;
-    /** @type {number | null} */
-    let point = null;
-    for (let level = this.currentLevel; level >= 0; level--) {
-      size = this.sizes[level];
-      head = this.heads[level];
-      tail = this.tails[level];
-      next = this.nexts[level];
-      let curr = point ?? head;
-      let last = null;
-      for (let i = 0; i < size; i++) {
-        if (predicate(curr)) {
-          point = last;
-          break;
-        }
-        last = curr;
-        if (curr === tail) break;
-        curr = next[curr];
-      }
-      if (curr === head && level === 0) return head;
-    }
-    return point;
-  }
-
-  /**
    * @param {(index: number) => -1 | 0 | 1} match
    */
   bisectLeft(match) {

@@ -85,25 +85,12 @@ test("find insertion points", () => {
 
   equal(list.size, 6);
 
-  // right
-  equal(
-    list.bisect((c) => list.compare(6, c) < 0),
-    0,
-  );
   equal(
     list.bisectRight((c) => list.compare(6, c)),
     0,
   );
   equal(
-    list.bisect((c) => list.compare(7, c) < 0),
-    3,
-  );
-  equal(
     list.bisectRight((c) => list.compare(7, c)),
-    4,
-  );
-  equal(
-    list.bisect((c) => list.compare(8, c) < 0),
     4,
   );
   equal(
@@ -111,47 +98,29 @@ test("find insertion points", () => {
     5,
   );
   equal(
-    list.bisect((c) => list.compare(9, c) < 0),
-    null,
-  );
-  equal(
     list.bisectRight((c) => list.compare(9, c)),
     -1,
   );
-
-  // left
   equal(
-    list.bisect((c) => list.compare(6, c) <= 0),
-    0,
+    list.bisectRight((c) => list.compare(10, c)),
+    1,
   );
+
   equal(
     list.bisectLeft((c) => list.compare(6, c)),
     0,
   );
-  let left;
-  left = list.bisect((c) => list.compare(7, c) <= 0);
-  equal(left, 0);
   equal(
-    list.next[left],
     list.bisectLeft((c) => list.compare(7, c)),
+    1,
   );
-  left = list.bisect((c) => list.compare(8, c) <= 0);
-  equal(left, 4);
   equal(
-    list.next[left],
     list.bisectLeft((c) => list.compare(8, c)),
-  );
-  equal(
-    list.bisect((c) => list.compare(9, c) <= 0),
-    null,
+    5,
   );
   equal(
     list.bisectLeft((c) => list.compare(9, c)),
     -1,
-  );
-  equal(
-    list.bisect((c) => list.compare(10, c) <= 0),
-    0,
   );
   equal(
     list.bisectLeft((c) => list.compare(10, c)),

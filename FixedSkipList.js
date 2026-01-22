@@ -101,9 +101,9 @@ export class FixedSkipList {
 
     this.currentLevel = Math.max(insertLevel, this.currentLevel);
 
-    let size, head, tail, next, prev, last, curr;
+    let size, head, tail, next, prev;
     let insert = false;
-    let point = null;
+    let point = -1;
     for (let level = this.currentLevel; level >= 0; level--) {
       insert = level <= insertLevel;
       size = this.sizes[level];
@@ -116,7 +116,7 @@ export class FixedSkipList {
 
       if (size >= 1) {
         if (compare(index, head) < 0) {
-          point = null;
+          point = -1;
           if (insert) {
             this.heads[level] = index;
             next[index] = head;
@@ -134,18 +134,15 @@ export class FixedSkipList {
             }
           }
         } else {
-          curr = point;
-          last = null;
-          if (curr == null) {
-            last = head;
-            curr = next[last];
-          }
-
-          for (let i = 0; i < size; i++) {
+          for (
+            let i = 0, curr = point > -1 ? point : next[head], last = point > -1 ? -1 : head;
+            i < size /* && last !== tail */;
+            i++, last = curr, curr = next[curr]
+          ) {
             if (compare(index, curr) < 0) {
               point = last;
               if (insert) {
-                // if we started with last being null, the assumption is we always skip first iteration
+                // if we started with last being -1, the assumption is we always skip first iteration
                 next[last] = index;
                 next[index] = curr;
                 if (level === 0) {
@@ -155,12 +152,10 @@ export class FixedSkipList {
               }
               break;
             }
-            last = curr;
-            curr = next[curr];
           }
         }
       } else {
-        point = null;
+        point = -1;
         if (insert) {
           this.heads[level] = index;
           this.tails[level] = index;
@@ -176,35 +171,36 @@ export class FixedSkipList {
    */
   remove(index) {
     let size, head, tail, next, prev;
-    let point = null;
+    let point = -1;
     for (let level = this.currentLevel; level >= 0; level--) {
       size = this.sizes[level];
       head = this.heads[level];
       tail = this.tails[level];
       next = this.nexts[level];
       prev = this.prevs[level];
-      for (let i = 0, curr = point ?? head, last = null; i < size; i++) {
+      for (
+        let i = 0, curr = point > -1 ? point : head, last = -1;
+        i < size && last !== tail;
+        i++, last = curr, curr = next[curr]
+      ) {
         if (curr === index) {
           point = last;
           this.sizes[level]--;
           if (index === head) {
             this.heads[level] = next[index];
           }
-          if (last != null) {
+          if (last > -1) {
             if (level === 0) {
               prev[next[index]] = last;
             }
             next[last] = next[index];
           }
           if (index === tail) {
-            this.tails[level] = last ?? head;
+            this.tails[level] = last > -1 ? last : head;
           }
           if (size === 1) this.currentLevel--;
           break;
         }
-        last = curr;
-        if (curr === tail) break;
-        curr = next[curr];
       }
     }
   }

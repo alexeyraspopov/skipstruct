@@ -292,16 +292,16 @@ export class FixedSkipList {
    * @param {number} [start]
    * @param {number} [limit]
    */
-  *forwards(start, limit) {
-    yield* iterate(this.next, start ?? this.head, this.tail, limit ?? this.size);
+  *forwards(start = this.head, limit = this.size) {
+    yield* iterate(this.next, start, this.tail, limit);
   }
 
   /**
    * @param {number} [start]
    * @param {number} [limit]
    */
-  *backwards(start, limit) {
-    yield* iterate(this.prev, start ?? this.tail, this.head, limit ?? this.size);
+  *backwards(start = this.tail, limit = this.size) {
+    yield* iterate(this.prev, start, this.head, limit);
   }
 
   *[Symbol.iterator]() {
@@ -316,8 +316,12 @@ export class FixedSkipList {
  * @param {number} limit
  */
 function* iterate(pointers, start, finish, limit) {
-  for (let i = 0, curr = start, last; i < limit && last !== finish; i++, curr = pointers[curr]) {
-    yield (last = curr);
+  for (
+    let i = 0, curr = start, last;
+    i < limit && last !== finish;
+    i++, last = curr, curr = pointers[curr]
+  ) {
+    yield curr;
   }
 }
 
